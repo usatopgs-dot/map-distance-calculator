@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' hide Path;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -249,7 +250,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // Build colored marker for waypoint
   Widget _markerWidget(int num, Color color) {
     return Container(
       width: 28,
@@ -297,19 +297,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
       body: Column(
         children: [
-          // GPS Status Bar
           _buildGpsBar(),
-
-          // Map
           SizedBox(
             height: MediaQuery.of(context).size.height * 0.38,
             child: _buildMap(),
           ),
-
-          // Toolbar
           _buildToolbar(),
-
-          // Tabs
           _buildTabs(),
         ],
       ),
@@ -317,25 +310,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildGpsBar() {
-    final bg = _gpsSuccess
-        ? const Color(0xFFDCFCE7)
-        : const Color(0xFFDBEAFE);
-    final fg = _gpsSuccess
-        ? const Color(0xFF15803D)
-        : const Color(0xFF1E40AF);
+    final bg = _gpsSuccess ? const Color(0xFFDCFCE7) : const Color(0xFFDBEAFE);
+    final fg = _gpsSuccess ? const Color(0xFF15803D) : const Color(0xFF1E40AF);
     return Container(
       color: bg,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       child: Row(
         children: [
-          Container(
-            width: 7, height: 7,
-            decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
-          ),
+          Container(width: 7, height: 7, decoration: BoxDecoration(color: fg, shape: BoxShape.circle)),
           const SizedBox(width: 8),
-          Expanded(
-            child: Text(_gpsStatus, style: TextStyle(fontSize: 12, color: fg)),
-          ),
+          Expanded(child: Text(_gpsStatus, style: TextStyle(fontSize: 12, color: fg))),
         ],
       ),
     );
@@ -354,7 +338,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.mapcalculator.app',
         ),
-        // Route polyline
         if (_waypoints.length >= 2)
           PolylineLayer(
             polylines: [
@@ -366,7 +349,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ],
           ),
-        // Area polygon
         if (_areaPoints.length >= 3)
           PolygonLayer(
             polygons: [
@@ -379,10 +361,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ],
           ),
-        // Waypoint markers
         MarkerLayer(
           markers: [
-            // My location marker
             if (_myPosition != null)
               Marker(
                 point: LatLng(_myPosition!.latitude, _myPosition!.longitude),
@@ -396,7 +376,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
               ),
-            // Route waypoints
             ..._waypoints.asMap().entries.map((e) => Marker(
               point: LatLng(e.value.lat, e.value.lng),
               width: 28, height: 28,
@@ -405,7 +384,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 child: _markerWidget(e.key + 1, kColors[e.key % kColors.length]),
               ),
             )),
-            // Area points
             ..._areaPoints.map((w) => Marker(
               point: LatLng(w.lat, w.lng),
               width: 12, height: 12,
@@ -431,14 +409,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _toolBtn('📍 Me', _myPosition != null, _goToMyLoc,
-                active: _myPosition != null),
+            _toolBtn('📍 Me', _myPosition != null, _goToMyLoc, active: _myPosition != null),
             const SizedBox(width: 6),
-            _toolBtn('+ Points', true, () => setState(() => _mode = MapMode.addPoints),
-                active: _mode == MapMode.addPoints),
+            _toolBtn('+ Points', true, () => setState(() => _mode = MapMode.addPoints), active: _mode == MapMode.addPoints),
             const SizedBox(width: 6),
-            _toolBtn('Area', true, () => setState(() => _mode = MapMode.area),
-                active: _mode == MapMode.area),
+            _toolBtn('Area', true, () => setState(() => _mode = MapMode.area), active: _mode == MapMode.area),
             Container(width: 1, height: 24, color: const Color(0xFFE5E7EB), margin: const EdgeInsets.symmetric(horizontal: 8)),
             _toolBtn('Save', true, _saveRoute),
             const SizedBox(width: 6),
@@ -451,39 +426,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _toolBtn(String label, bool enabled, VoidCallback onTap,
-      {bool active = false, bool danger = false}) {
+  Widget _toolBtn(String label, bool enabled, VoidCallback onTap, {bool active = false, bool danger = false}) {
     return GestureDetector(
       onTap: enabled ? onTap : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: active
-              ? const Color(0xFFEFF6FF)
-              : danger
-                  ? const Color(0xFFFEF2F2)
-                  : Colors.white,
+          color: active ? const Color(0xFFEFF6FF) : danger ? const Color(0xFFFEF2F2) : Colors.white,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: active
-                ? const Color(0xFFBFDBFE)
-                : danger
-                    ? const Color(0xFFFECACA)
-                    : const Color(0xFFE5E7EB),
-          ),
+          border: Border.all(color: active ? const Color(0xFFBFDBFE) : danger ? const Color(0xFFFECACA) : const Color(0xFFE5E7EB)),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: active
-                ? const Color(0xFF2563EB)
-                : danger
-                    ? const Color(0xFFDC2626)
-                    : enabled
-                        ? const Color(0xFF374151)
-                        : const Color(0xFF9CA3AF),
+            color: active ? const Color(0xFF2563EB) : danger ? const Color(0xFFDC2626) : enabled ? const Color(0xFF374151) : const Color(0xFF9CA3AF),
           ),
         ),
       ),
@@ -500,22 +458,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             unselectedLabelColor: const Color(0xFF9CA3AF),
             indicatorColor: const Color(0xFF2563EB),
             labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-            tabs: const [
-              Tab(text: 'Stats'),
-              Tab(text: 'Elevation'),
-              Tab(text: 'History'),
-              Tab(text: 'Share'),
-            ],
+            tabs: const [Tab(text: 'Stats'), Tab(text: 'Elevation'), Tab(text: 'History'), Tab(text: 'Share')],
           ),
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: [
-                _buildStatsTab(),
-                _buildElevationTab(),
-                _buildHistoryTab(),
-                _buildShareTab(),
-              ],
+              children: [_buildStatsTab(), _buildElevationTab(), _buildHistoryTab(), _buildShareTab()],
             ),
           ),
         ],
@@ -529,7 +477,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Stats grid
           GridView.count(
             crossAxisCount: 4,
             shrinkWrap: true,
@@ -545,7 +492,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ],
           ),
           const SizedBox(height: 10),
-          // Travel times
           Row(
             children: [
               Expanded(child: _travelCard('🚗', 'Car', _stats.carTime, '80 km/h')),
@@ -556,62 +502,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ],
           ),
           const SizedBox(height: 12),
-          // Waypoints list
           const Text('WAYPOINTS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF9CA3AF), letterSpacing: 0.7)),
           const SizedBox(height: 7),
           if (_waypoints.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Text('Tap on the map to add waypoints', style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))),
-              ),
-            )
+            const Center(child: Padding(padding: EdgeInsets.all(16), child: Text('Tap on the map to add waypoints', style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)))))
           else
             ..._waypoints.asMap().entries.map((e) {
               final i = e.key;
               final w = e.value;
               double? seg;
-              if (i > 0) {
-                seg = haversineDistance(
-                  _waypoints[i - 1].lat, _waypoints[i - 1].lng,
-                  w.lat, w.lng,
-                );
-              }
+              if (i > 0) seg = haversineDistance(_waypoints[i-1].lat, _waypoints[i-1].lng, w.lat, w.lng);
               return Container(
                 margin: const EdgeInsets.only(bottom: 5),
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF9FAFB),
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(8)),
                 child: Row(
                   children: [
                     Container(
                       width: 20, height: 20,
-                      decoration: BoxDecoration(
-                        color: kColors[i % kColors.length],
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text('${i + 1}', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
-                      ),
+                      decoration: BoxDecoration(color: kColors[i % kColors.length], shape: BoxShape.circle),
+                      child: Center(child: Text('${i+1}', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700))),
                     ),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '${w.lat.toStringAsFixed(4)}°, ${w.lng.toStringAsFixed(4)}°',
-                        style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
-                      ),
-                    ),
-                    Text(
-                      seg != null ? '${seg.toStringAsFixed(2)} km' : 'Start',
-                      style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF)),
-                    ),
+                    Expanded(child: Text('${w.lat.toStringAsFixed(4)}°, ${w.lng.toStringAsFixed(4)}°', style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280)))),
+                    Text(seg != null ? '${seg.toStringAsFixed(2)} km' : 'Start', style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF))),
                     const SizedBox(width: 6),
-                    GestureDetector(
-                      onTap: () => _removePoint(i),
-                      child: const Icon(Icons.close, size: 14, color: Color(0xFF9CA3AF)),
-                    ),
+                    GestureDetector(onTap: () => _removePoint(i), child: const Icon(Icons.close, size: 14, color: Color(0xFF9CA3AF))),
                   ],
                 ),
               );
@@ -624,25 +540,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _statCard(String label, String value, String unit) {
     return Container(
       padding: const EdgeInsets.all(9),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(8)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(label, style: const TextStyle(fontSize: 9, color: Color(0xFF9CA3AF))),
           const SizedBox(height: 3),
-          RichText(
-            text: TextSpan(
-              children: [
-                TextSpan(text: value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF111827))),
-                if (unit.isNotEmpty)
-                  TextSpan(text: ' $unit', style: const TextStyle(fontSize: 9, color: Color(0xFF6B7280))),
-              ],
-            ),
-          ),
+          RichText(text: TextSpan(children: [
+            TextSpan(text: value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF111827))),
+            if (unit.isNotEmpty) TextSpan(text: ' $unit', style: const TextStyle(fontSize: 9, color: Color(0xFF6B7280))),
+          ])),
         ],
       ),
     );
@@ -651,11 +559,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _travelCard(String emoji, String mode, String time, String speed) {
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE5E7EB))),
       child: Column(
         children: [
           Text(emoji, style: const TextStyle(fontSize: 20)),
@@ -670,24 +574,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildElevationTab() {
     if (_waypoints.length < 2) {
-      return const Center(
-        child: Text('Add 2+ waypoints to see elevation chart', style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))),
-      );
+      return const Center(child: Text('Add 2+ waypoints to see elevation chart', style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))));
     }
-    // Simulated elevation data (same approach as original)
     final elevData = _waypoints.asMap().entries.map((e) {
       final w = e.value;
       final seed = (sin(w.lat * 12.9898 + w.lng * 78.233) * 43758.5453).abs() % 1;
       return (50 + seed * 800 + sin(e.key * 1.7) * 80).round();
     }).toList();
-
     final minElev = elevData.reduce(min);
     final maxElev = elevData.reduce(max);
     final gain = elevData.asMap().entries.fold(0, (g, e) {
       if (e.key > 0 && e.value > elevData[e.key - 1]) return g + e.value - elevData[e.key - 1];
       return g;
     });
-
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -697,15 +596,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           const SizedBox(height: 10),
           SizedBox(height: 120, child: CustomPaint(painter: ElevationPainter(elevData, kColors), size: Size.infinite)),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(child: _statCard('Min Elev', '$minElev', 'm')),
-              const SizedBox(width: 7),
-              Expanded(child: _statCard('Max Elev', '$maxElev', 'm')),
-              const SizedBox(width: 7),
-              Expanded(child: _statCard('Total Gain', '+$gain', 'm')),
-            ],
-          ),
+          Row(children: [
+            Expanded(child: _statCard('Min Elev', '$minElev', 'm')),
+            const SizedBox(width: 7),
+            Expanded(child: _statCard('Max Elev', '$maxElev', 'm')),
+            const SizedBox(width: 7),
+            Expanded(child: _statCard('Total Gain', '+$gain', 'm')),
+          ]),
         ],
       ),
     );
@@ -720,12 +617,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           const Text('SAVED ROUTES (LAST 5)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF9CA3AF), letterSpacing: 0.7)),
           const SizedBox(height: 8),
           if (_savedRoutes.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Text('No saved routes — tap Save to store a route', style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))),
-              ),
-            )
+            const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No saved routes — tap Save to store a route', style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)))))
           else
             Expanded(
               child: ListView.builder(
@@ -737,18 +629,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF9FAFB),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
-                      ),
+                      decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFE5E7EB))),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(r.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF111827))),
                           const SizedBox(height: 3),
-                          Text('${r.waypoints.length} points · ${r.distanceKm} km · ${r.date}',
-                              style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
+                          Text('${r.waypoints.length} points · ${r.distanceKm} km · ${r.date}', style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
                         ],
                       ),
                     ),
@@ -769,40 +656,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         children: [
           const Text('SHARE YOUR ROUTE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF9CA3AF), letterSpacing: 0.7)),
           const SizedBox(height: 8),
-          const Text('Add waypoints and tap the Share button above to generate a shareable link.',
-              style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+          const Text('Add waypoints and tap the Share button above to generate a shareable link.', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
           const SizedBox(height: 10),
           if (_shareUrl.isEmpty)
-            const Center(child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Text('No route to share yet', style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))),
-            ))
+            const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No route to share yet', style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)))))
           else
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF9FAFB),
-                borderRadius: BorderRadius.circular(8),
-              ),
+              decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(8)),
               child: Row(
                 children: [
-                  Expanded(
-                    child: Text(_shareUrl, style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280)), overflow: TextOverflow.ellipsis),
-                  ),
+                  Expanded(child: Text(_shareUrl, style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280)), overflow: TextOverflow.ellipsis)),
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: _copyShare,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF16A34A),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    ),
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6)),
                     child: Text(_copied ? 'Copied!' : 'Copy', style: const TextStyle(fontSize: 12)),
                   ),
                 ],
               ),
             ),
           const Divider(height: 30),
-          // FAQ Section
           const Text('FAQ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF111827))),
           const SizedBox(height: 10),
           Expanded(
@@ -852,11 +726,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               title: Text('Remove waypoint ${index + 1}'),
               onTap: () { Navigator.pop(ctx); _removePoint(index); },
             ),
-            ListTile(
-              leading: const Icon(Icons.close),
-              title: const Text('Cancel'),
-              onTap: () => Navigator.pop(ctx),
-            ),
+            ListTile(leading: const Icon(Icons.close), title: const Text('Cancel'), onTap: () => Navigator.pop(ctx)),
           ],
         ),
       ),
@@ -917,28 +787,24 @@ class ElevationPainter extends CustomPainter {
       pts.add(Offset(x, y));
     }
 
-    // Fill
-    final fillPath = Path()..moveTo(pts.first.x, size.height - pad);
-    for (final p in pts) fillPath.lineTo(p.x, p.y);
-    fillPath.lineTo(pts.last.x, size.height - pad);
+    final fillPath = ui.Path()..moveTo(pts.first.dx, size.height - pad);
+    for (final p in pts) fillPath.lineTo(p.dx, p.dy);
+    fillPath.lineTo(pts.last.dx, size.height - pad);
     fillPath.close();
     canvas.drawPath(fillPath, Paint()..color = const Color(0xFF2563EB).withOpacity(0.1));
 
-    // Line
     final linePaint = Paint()
       ..color = const Color(0xFF2563EB)
       ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke;
-    final linePath = Path()..moveTo(pts.first.x, pts.first.y);
-    for (final p in pts) linePath.lineTo(p.x, p.y);
+    final linePath = ui.Path()..moveTo(pts.first.dx, pts.first.dy);
+    for (final p in pts) linePath.lineTo(p.dx, p.dy);
     canvas.drawPath(linePath, linePaint);
 
-    // Dots + labels
     for (int i = 0; i < pts.length; i++) {
       final p = pts[i];
       canvas.drawCircle(p, 5, Paint()..color = colors[i % colors.length]);
       canvas.drawCircle(p, 5, Paint()..color = Colors.white..style = PaintingStyle.stroke..strokeWidth = 2);
-
       final tp = TextPainter(
         text: TextSpan(text: '${data[i]}m', style: const TextStyle(color: Colors.black54, fontSize: 9)),
         textDirection: TextDirection.ltr,
